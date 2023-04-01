@@ -1,0 +1,246 @@
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(viridis)
+library(stargazer)
+library(car)
+library(plyr)
+library(moments)
+library(gghalves)
+dat <- read.csv("D:/ECO/7063/NDAP_REPORT_7063.csv")
+dat
+dat <- na.omit(dat)
+dat
+
+colnames(dat)
+
+
+df<- dat %>% select(-"Country")
+df
+df <- df[,!names(df) %in% c("State.lgd.code", "Month", "Year")]
+df
+
+df <- df %>% 
+  rename("DID" = "District.lgd.code")
+
+df<- df %>%
+  mutate(ID = df[row_number(), 'DID']*100+(df[row_number(), 'Yearcode'])-2011)
+df<- df %>% select(-"ROWID")
+
+df
+df2 <- unique( df[ , c('State','DID','District','Yearcode','Monthcode','Ground.water.level','ID') ] )
+df2
+df2 <- df2 %>% 
+  rename("YEAR" = "Yearcode")
+df2
+
+df3 <- read.csv("D:/ECO/HBS_Table_No._06___Net_State_Domestic_Product_at_Factor_Cost_-_State-Wise_(at_Constant_Prices).xlsx - Report 1.csv")
+
+
+df3 <- df3[-35,]
+
+View(df3)
+
+df4 <- gather(df3, key = "State", value = "value",-YEAR)
+df4$YEAR <- substr(df4$YEAR, 1, 4)
+#View(df4)
+
+
+df2$State <- toupper(df2$State)
+unique(df2$State)
+unique(df4$State)
+df4$State <- chartr(".", " ", df4$State)
+unique(df4$State)
+df4$State[df4$State == 'JAMMU   KASHMIR'] <- 'JAMMU AND KASHMIR'
+df4$State[df4$State == 'ORISSA'] <- 'ODISHA'
+df4$State[df4$State == 'ANDAMAN   NICOBAR ISLANDS'] <- 'ANDAMAN AND NICOBAR ISLANDS'
+
+unique(df4$State)
+
+View(df2)
+colnames(df2)
+df2<- df2 %>% select(-"Monthcode")
+
+
+df2 <- df2 %>%                                     # Consolidate duplicates
+  group_by(ID, State, DID,District,YEAR) %>%
+  dplyr::summarise(Ground.water.level = mean(Ground.water.level)) %>% 
+  as.data.frame()
+
+#REMOVE WEIRD DID
+df2<-df2[!(df2$DID==999999),]
+
+df5 <- merge(df2, df4, by = c("YEAR","State"))
+#View(df5)
+
+df5[df5$value == '',]
+mean(df5$Ground.water.level)
+
+
+
+gini <- read.csv("D:/ECO/gini.xlsx.csv")
+#View(gini)
+gini <- gini[-c(1,2,3), -c(1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)]
+
+colnames(gini)[1] <- "District"
+colnames(gini)[2] <- "GI"
+#View(gini)
+
+final <- merge(df5, gini, by = c("District"))
+final$value <- as.numeric(final$value)
+final$GI <- as.numeric(final$GI)
+final$Ground.water.level <- as.numeric(final$Ground.water.level)
+final$YEAR <- as.numeric(final$YEAR)
+
+final <- final %>% 
+  rename("SDP" = "value")
+
+View(final)
+
+stargazer(final[c("Ground.water.level","SDP","GI")], type = "text",
+          title="Descriptive statistics of variables", digits=1, out="stats.png")
+
+
+colnames(final)
+
+
+final%>%
+  drop_na(SDP)%>%
+  ggplot(aes(x=as.factor(YEAR),y=SDP))+
+  geom_half_boxplot(center=TRUE, errorbar.draw=FALSE, 
+                    width=1, nudge=0.02,outlier.color = "red", outlier.size=3, alpha=0.1) +
+  stat_summary(fun.data = "mean_cl_boot", colour = "green")+
+  geom_half_violin(side="r", nudge=0.01, line="dotted") +
+  labs(y = "SDP",x="YEAR")+
+  theme_bw()
+
+
+final%>%
+  drop_na(GI)%>%
+  ggplot(aes(x=as.factor(YEAR),y = GI)) +
+  geom_half_boxplot(center=TRUE, errorbar.draw=FALSE, 
+                    width=1, nudge=0.02,outlier.color = "red", outlier.size=3, alpha=0.1) +
+  stat_summary(fun.data = "mean_cl_boot", colour = "green", size=1)+
+  geom_half_violin(side="r", nudge=0.01) +
+  labs(y = "GI",x="YEAR")+
+  theme_bw()
+
+final%>%
+  drop_na(Ground.water.level)%>%
+  ggplot(aes(as.factor(YEAR),Ground.water.level)) +
+  geom_half_boxplot(center=TRUE, errorbar.draw=FALSE, 
+                    width=1, nudge=0.02,outlier.color = "red", outlier.size=3, alpha=0.1) +
+  stat_summary(fun.data = "mean_cl_boot", colour = "green", size=1)+
+  geom_half_violin(side="r", nudge=0.01, line="dotted") +
+  labs(y = "Ground Water Level",x="YEAR")+
+  theme_bw()
+
+
+
+
+final <- na.omit(final)
+
+specific <- subset( final, final$Ground.water.level<50 & final$SDP<1200000)
+
+model1<-lm(formula=Ground.water.level~SDP,data=specific)
+stargazer(model1,type="text")
+specific$Residual_value<-residuals(model1)
+
+specific %>%
+  ggplot(aes(SDP, Ground.water.level,
+             colour = YEAR))+
+  geom_point(alpha = 0.5)+
+  geom_smooth(method=lm, se=F)+
+  facet_wrap(~YEAR)
+
+
+
+
+
+specific %>%      #plot1
+  ggplot(aes(SDP, Ground.water.level))+
+  geom_point(alpha = 0.1)+
+  geom_smooth(method=lm, aes(fill="red"))
+
+#plot2
+specific%>%
+  ggplot(aes(specific$SDP, specific$Residual_value))+
+  geom_point(alpha=0.1)+
+  labs(x="SDP", y="Residual_value")
+
+
+#plot3
+specific$Predicted_value<-fitted.values(model1)
+
+specific%>%
+  ggplot(aes(specific$Ground.water.level, specific$Predicted_value))+
+  geom_point(alpha=0.1)+
+  labs(x="EQI_Actual", y="Predicted_value")
+
+#PART 8
+specific %>%
+  ggplot(aes(Residual_value))+
+  geom_histogram()+
+  geom_vline(aes(xintercept = mean(Residual_value)), color = "red")+
+  theme_bw()
+
+
+#PART 9
+model2<-lm(formula=Ground.water.level~SDP+SDP^2+SDP^3+GI,data=specific)
+
+
+stargazer(model2,type="text")
+avPlots(model2, col='red', cex=0.4, lwd=4, main="Dependence on each of the Independent Variables while holding others fixed")
+
+
+
+final <- merge(df5, gini, by = c("District"))
+final$value <- as.numeric(final$value)
+final$GI <- as.numeric(final$GI)
+final$Ground.water.level <- as.numeric(final$Ground.water.level)
+final$YEAR <- as.numeric(final$YEAR)
+final$YEAR <- as.factor(final$YEAR)
+
+final <- final %>% 
+  rename("SDP" = "value")
+
+subset( final, final$Ground.water.level<50) %>%
+  ggplot(aes(Ground.water.level, fill=YEAR))+
+  geom_histogram()+
+  geom_vline(aes(xintercept = mean(Ground.water.level)), color = "red")+
+  theme_bw()
+
+
+final %>%
+  drop_na(GI)%>%
+  ggplot(aes(GI, fill=YEAR))+
+  geom_histogram(binwidth = 0.025)+
+  geom_vline(aes(xintercept = mean(GI)), color = "red")+
+  theme_bw()
+
+
+
+subset( final, final$SDP<1200000) %>%
+  drop_na(SDP)%>%
+  ggplot(aes(SDP, fill = YEAR))+
+  geom_histogram(bins=15)+
+  geom_vline(aes(xintercept = mean(SDP)), color = "red")+
+  theme_bw()
+
+
+specific$YEAR <- as.factor(specific$YEAR)
+
+specific %>%
+  ggplot(aes(SDP, Ground.water.level,
+             colour = YEAR))+
+  geom_point(alpha = 0.3)+
+  geom_smooth(method=lm, se=F)
+
+write.csv(specific, file = "Group_16.csv", row.names = FALSE)
+
+
+
+skewness(final$SDP, na.rm = TRUE)
+skewness(final$GI ,na.rm=TRUE)
+skewness(final$Ground.water.level,na.rm=TRUE)
+
