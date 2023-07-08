@@ -1,4 +1,4 @@
-# Econometrics-Data-Assignment-1
+# Econometrics-Data-Assignment
 
 
 This repository contains the code for an assignment on analyzing the relationship between economic growth, income inequality, and groundwater level in India. The goal of this assignment is to explore the environmental Kuznets curve and its relationship with groundwater level.
