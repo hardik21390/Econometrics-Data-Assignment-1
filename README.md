@@ -16,3 +16,4 @@ The assignment tasks are as follows:
     9.Estimate a second regression model that includes the Gini index and summarize the results in a table and interpret.
 
 Please refer to the assignment document for more detailed instructions and resources.
+Please refer to the final PPT for the insights.
