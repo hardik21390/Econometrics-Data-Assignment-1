@@ -14,5 +14,8 @@ In the First Part
     -Our preliminary findings suggest a positive relationship between income inequality (measured by the Gini index) and groundwater level. 
     The insights generated from this study aim to provide valuable guidance to policymakers for promoting sustainable development in India.
 
-Please refer to the assignment document for more detailed instructions and resources.
+Please refer to the Variables_Analysis document for more detailed information about the first part.
+
+In the Second Part
+
 Please refer to the final PPT for the insights.
