@@ -1,4 +1,4 @@
-# Econometrics-Data-Assignment
+# Sustainable-India-Analysis
 
 This research project aimed to investigate the correlation between economic growth, income inequality, and groundwater level in India. The study utilized district-level data on groundwater level, economic output (SDP), and income inequality (Gini index) to explore the relationship between these variables. The analysis was guided by the Environmental Kuznets Curve theory, which suggests an inverted U-shaped relationship between income and environmental quality.
 
